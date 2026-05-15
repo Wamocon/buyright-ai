@@ -1,5 +1,7 @@
 import { analysisResultSchema } from "@/schemas/analysis";
-import type { AnalysisResult, InputType } from "@/types";
+import { fakeDetectorResultSchema } from "@/schemas/fake-detector";
+import { budgetOptimizerResultSchema } from "@/schemas/budget-optimizer";
+import type { AnalysisResult, InputType, FakeDetectorResult, BudgetOptimizerResult } from "@/types";
 import {
   ANALYSIS_SYSTEM_PROMPT,
   URL_ANALYSIS_PROMPT,
@@ -7,6 +9,15 @@ import {
   TEXT_ANALYSIS_PROMPT,
   RETRY_PROMPT,
 } from "@/prompts/analysis";
+import {
+  FAKE_DETECTOR_SYSTEM_PROMPT,
+  FAKE_DETECTOR_URL_PROMPT,
+  FAKE_DETECTOR_TEXT_PROMPT,
+} from "@/prompts/fake-detector";
+import {
+  BUDGET_OPTIMIZER_SYSTEM_PROMPT,
+  buildBudgetOptimizerPrompt,
+} from "@/prompts/budget-optimizer";
 import { getWebContext } from "@/services/search";
 
 
@@ -197,7 +208,11 @@ async function callAIProvider({
           temperature: 0.3,
           max_tokens: 2000,
         };
-        if (provider === 'openrouter') body.response_format = { type: "json_object" };
+        // json_object mode: OpenRouter supports it broadly; Groq only for llama-3.x models
+        const groqJsonSupported = provider === 'groq' && /llama-3/i.test(model);
+        if (provider === 'openrouter' || groqJsonSupported) {
+          body.response_format = { type: "json_object" };
+        }
         const response = await fetch(apiUrl, {
           method: "POST",
           headers,
@@ -205,23 +220,24 @@ async function callAIProvider({
         });
         if (!response.ok) {
           const errorBody = await response.text();
-          // On 429 rate-limit, wait for retry-after then try next model
+          // On 429: skip to next model immediately (no wait — different model, not a retry)
           if (response.status === 429) {
-            let retryAfter = 8;
-            try {
-              const parsed = JSON.parse(errorBody);
-              retryAfter = parsed?.error?.metadata?.retry_after_seconds ?? retryAfter;
-            } catch { /* noop */ }
-            await new Promise((r) => setTimeout(r, retryAfter * 1000));
-            lastError = new Error(`${provider} rate limited (429), retried after ${retryAfter}s`);
-            break; // move to next model
-          }
-          lastError = new Error(`${provider} API error (${response.status}): ${errorBody}`);
+            console.warn(`[AI] ${provider}/${model} rate-limited (429), skipping to next model`);
+            lastError = new Error(`${provider} rate limited (429)`);
+            break; // move to next model without waiting
+          }          // On 400: permanent error (bad request), no point retrying same model
+          if (response.status === 400) {
+            console.warn(`[AI] ${provider}/${model} bad request (400), skipping model`);
+            lastError = new Error(`${provider}/${model} bad request (400): ${errorBody}`);
+            break;
+          }          lastError = new Error(`${provider} API error (${response.status}): ${errorBody}`);
+          console.warn(`[AI] ${provider}/${model} error ${response.status}`);
           continue;
         }
         const data = await response.json();
         const content = data.choices?.[0]?.message?.content;
         if (!content) throw new Error("No content in AI response");
+        console.info(`[AI] ${provider}/${model} responded OK`);
         return content;
       } catch (err) {
         lastError = err;
@@ -273,6 +289,7 @@ export async function analyzeProduct(
   // 1. Try Groq (all models)
   if (groqApiKey && groqModels.length) {
     try {
+      console.info(`[AI] Trying Groq with models: ${groqModels.join(", ")}`);
       const content = await callAIProvider({
         provider: 'groq',
         apiKey: groqApiKey,
@@ -285,15 +302,21 @@ export async function analyzeProduct(
       });
       const parsed = sanitizeAnalysisResponse(tryParseJSON(content));
       const validated = analysisResultSchema.safeParse(parsed);
-      if (validated.success) return validated.data;
+      if (validated.success) {
+        console.info("[AI] Groq validation passed, returning result");
+        return validated.data;
+      }
+      console.warn("[AI] Groq validation failed:", JSON.stringify(validated.error.issues));
       lastError = new Error(`Groq validation failed: ${JSON.stringify(validated.error.issues)}`);
     } catch (err) {
+      console.warn("[AI] Groq provider error:", err);
       lastError = err;
     }
   }
   // 2. Try OpenRouter (all models)
   if (openrouterApiKey && openrouterModels.length) {
     try {
+      console.info(`[AI] Trying OpenRouter with models: ${openrouterModels.join(", ")}`);
       const content = await callAIProvider({
         provider: 'openrouter',
         apiKey: openrouterApiKey,
@@ -306,9 +329,14 @@ export async function analyzeProduct(
       });
       const parsed = sanitizeAnalysisResponse(tryParseJSON(content));
       const validated = analysisResultSchema.safeParse(parsed);
-      if (validated.success) return validated.data;
+      if (validated.success) {
+        console.info("[AI] OpenRouter validation passed, returning result");
+        return validated.data;
+      }
+      console.warn("[AI] OpenRouter validation failed:", JSON.stringify(validated.error.issues));
       lastError = new Error(`OpenRouter validation failed: ${JSON.stringify(validated.error.issues)}`);
     } catch (err) {
+      console.warn("[AI] OpenRouter provider error:", err);
       lastError = err;
     }
   }
@@ -344,4 +372,125 @@ export async function* streamAnalysisSteps(
   };
 
   return result;
+}
+
+// ============================================================================
+// Fake Detector
+// ============================================================================
+
+export async function analyzeFakeDetector(
+  type: "url" | "text",
+  value: string,
+  locale: string = "en",
+): Promise<FakeDetectorResult> {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+  const groqModels = (process.env.GROQ_MODELS ?? "llama-3.3-70b-versatile,llama3-70b-8192").split(",").filter(Boolean);
+  const openrouterModels = (process.env.OPENROUTER_MODELS ?? "openai/gpt-4o-mini").split(",").filter(Boolean);
+
+  const userPrompt = (type === "url"
+    ? FAKE_DETECTOR_URL_PROMPT.replace("{url}", value)
+    : FAKE_DETECTOR_TEXT_PROMPT.replace("{text}", value)) +
+    (locale === "de" ? "\n\nRespond in German language." : "");
+
+  const messages = [
+    { role: "system", content: FAKE_DETECTOR_SYSTEM_PROMPT },
+    { role: "user", content: userPrompt },
+  ];
+
+  let lastError: unknown;
+
+  for (const [apiKey, apiUrl, provider, models] of [
+    [groqApiKey, GROQ_API_URL, "groq", groqModels],
+    [openrouterApiKey, OPENROUTER_API_URL, "openrouter", openrouterModels],
+  ] as const) {
+    if (!apiKey) continue;
+    try {
+      console.info(`[FakeDetector] Trying ${provider}`);
+      const content = await callAIProvider({
+        provider,
+        apiKey,
+        apiUrl,
+        models: [...models],
+        messages,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+        title: "BuyRight AI",
+        imageMode: false,
+      });
+      const parsed = tryParseJSON(content);
+      const validated = fakeDetectorResultSchema.safeParse(parsed);
+      if (validated.success) {
+        console.info(`[FakeDetector] ${provider} validation passed`);
+        return validated.data as FakeDetectorResult;
+      }
+      console.warn(`[FakeDetector] ${provider} validation failed:`, JSON.stringify(validated.error.issues));
+      lastError = new Error(`${provider} validation failed`);
+    } catch (err) {
+      console.warn(`[FakeDetector] ${provider} error:`, err);
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error("Fake detection failed: No AI provider available");
+}
+
+// ============================================================================
+// Budget Optimizer
+// ============================================================================
+
+export async function analyzeBudgetOptimizer(
+  budget: number,
+  currency: string,
+  items: string[],
+  locale: string = "en",
+): Promise<BudgetOptimizerResult> {
+  const groqApiKey = process.env.GROQ_API_KEY;
+  const openrouterApiKey = process.env.OPENROUTER_API_KEY;
+  const groqModels = (process.env.GROQ_MODELS ?? "llama-3.3-70b-versatile,llama3-70b-8192").split(",").filter(Boolean);
+  const openrouterModels = (process.env.OPENROUTER_MODELS ?? "openai/gpt-4o-mini").split(",").filter(Boolean);
+
+  const userPrompt = buildBudgetOptimizerPrompt(budget, currency, items, locale);
+  const messages = [
+    { role: "system", content: BUDGET_OPTIMIZER_SYSTEM_PROMPT },
+    { role: "user", content: userPrompt },
+  ];
+
+  let lastError: unknown;
+
+  for (const [apiKey, apiUrl, provider, models] of [
+    [groqApiKey, GROQ_API_URL, "groq", groqModels],
+    [openrouterApiKey, OPENROUTER_API_URL, "openrouter", openrouterModels],
+  ] as const) {
+    if (!apiKey) continue;
+    try {
+      console.info(`[BudgetOptimizer] Trying ${provider}`);
+      const content = await callAIProvider({
+        provider,
+        apiKey,
+        apiUrl,
+        models: [...models],
+        messages,
+        appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+        title: "BuyRight AI",
+        imageMode: false,
+      });
+      const parsed = tryParseJSON(content);
+      // Inject the user's budget into the parsed result as ground truth
+      if (parsed && typeof parsed === "object") {
+        (parsed as Record<string, unknown>).total_budget = budget;
+      }
+      const validated = budgetOptimizerResultSchema.safeParse(parsed);
+      if (validated.success) {
+        console.info(`[BudgetOptimizer] ${provider} validation passed`);
+        return validated.data as BudgetOptimizerResult;
+      }
+      console.warn(`[BudgetOptimizer] ${provider} validation failed:`, JSON.stringify(validated.error.issues));
+      lastError = new Error(`${provider} validation failed`);
+    } catch (err) {
+      console.warn(`[BudgetOptimizer] ${provider} error:`, err);
+      lastError = err;
+    }
+  }
+
+  throw lastError ?? new Error("Budget optimization failed: No AI provider available");
 }

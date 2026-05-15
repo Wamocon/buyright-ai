@@ -12,6 +12,7 @@ import {
   TestimonialsSection,
   FAQSection,
   CTASection,
+  ToolsShowcaseSection,
 } from "@/features/landing/LandingSections";
 
 export default async function Home({
@@ -63,6 +64,7 @@ export default async function Home({
           </div>
         </section>
 
+        <ToolsShowcaseSection />
         <ProblemSection />
         <BenefitsSection />
         <HowItWorksSection />

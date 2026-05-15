@@ -78,6 +78,62 @@ export interface AnalysisRequest {
   imageUrl?: string;
 }
 
+// ============ Fake Detector ============
+
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type FakeVerdict = "SAFE" | "SUSPICIOUS" | "LIKELY_FAKE";
+export type PriceVerdict = "NORMAL" | "SUSPICIOUS" | "TOO_GOOD_TO_BE_TRUE";
+
+export interface FakeDetectorReviewAnalysis {
+  authenticity_score: number; // 0-100
+  fake_percentage_estimate: number; // 0-100
+  suspicious_patterns: string[];
+}
+
+export interface FakeDetectorPriceAnalysis {
+  verdict: PriceVerdict;
+  detail: string;
+}
+
+export interface FakeDetectorResult {
+  product_name: string;
+  trust_score: number; // 0-100
+  risk_level: RiskLevel;
+  verdict: FakeVerdict;
+  summary: string;
+  red_flags: string[];
+  positive_signals: string[];
+  review_analysis: FakeDetectorReviewAnalysis;
+  price_analysis: FakeDetectorPriceAnalysis;
+  seller_indicators: string[];
+  recommendation: string;
+}
+
+// ============ Budget Optimizer ============
+
+export type BudgetPriority = "MUST_BUY" | "NICE_TO_HAVE" | "SKIP";
+
+export interface BudgetItem {
+  name: string;
+  estimated_price: number;
+  priority: BudgetPriority;
+  priority_score: number; // 0-100
+  value_score: number; // 0-100
+  reason: string;
+  alternative_suggestion: string;
+}
+
+export interface BudgetOptimizerResult {
+  total_budget: number;
+  total_estimated: number;
+  optimized_total: number;
+  budget_efficiency: number; // 0-100
+  savings: number;
+  summary: string;
+  top_advice: string;
+  items: BudgetItem[];
+}
+
 export interface UserProfile {
   id: string;
   email: string;

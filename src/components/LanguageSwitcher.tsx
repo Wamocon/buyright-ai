@@ -22,7 +22,8 @@ export function LanguageSwitcher() {
         : withoutLocale;
 
     startTransition(() => {
-      router.replace(newPath);
+      router.push(newPath);
+      router.refresh(); // force server components to re-render with new locale
     });
   }
 

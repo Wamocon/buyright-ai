@@ -11,8 +11,9 @@ export function Footer() {
     product: [
       { href: "/analyze", label: t("analyze") },
       { href: "/compare", label: t("compare") },
+      { href: "/fake-detector", label: t("fakeDetector") },
+      { href: "/budget-optimizer", label: t("budgetOptimizer") },
       { href: "/#pricing", label: t("pricing") },
-      { href: "/#features", label: t("features") },
     ],
     legal: [
       { href: "/impressum", label: t("imprint") },

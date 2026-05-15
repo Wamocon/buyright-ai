@@ -9,12 +9,50 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Menu, X, LayoutDashboard, User, LogOut, Crown } from "lucide-react";
+import {
+  Menu, X, LayoutDashboard, User, LogOut, Crown,
+  Search, GitCompare, ShieldAlert, Wallet, ChevronDown, Sparkles,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+const tools = (t: ReturnType<typeof useTranslations<"nav">>) => [
+  {
+    href: "/analyze",
+    icon: Search,
+    label: t("analyze"),
+    desc: t("analyzeDesc"),
+    color: "text-indigo-500",
+    bg: "bg-indigo-50 dark:bg-indigo-950/30",
+  },
+  {
+    href: "/compare",
+    icon: GitCompare,
+    label: t("compare"),
+    desc: t("compareDesc"),
+    color: "text-blue-500",
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+  },
+  {
+    href: "/fake-detector",
+    icon: ShieldAlert,
+    label: t("fakeDetector"),
+    desc: t("fakeDetectorDesc"),
+    color: "text-amber-500",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+  },
+  {
+    href: "/budget-optimizer",
+    icon: Wallet,
+    label: t("budgetOptimizer"),
+    desc: t("budgetOptimizerDesc"),
+    color: "text-violet-500",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+  },
+];
 
 export function Header() {
   const t = useTranslations("nav");
@@ -28,7 +66,6 @@ export function Header() {
   useEffect(() => {
     const supabase = createClient();
 
-    // Get initial session
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
       if (data.user) {
@@ -43,7 +80,6 @@ export function Header() {
       }
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -72,9 +108,7 @@ export function Header() {
     router.refresh();
   }
 
-  const userInitials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : "U";
+  const userInitials = user?.email ? user.email.slice(0, 2).toUpperCase() : "U";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -83,22 +117,21 @@ export function Header() {
   }, []);
 
   const isLanding = pathname === "/";
+  const toolList = tools(t);
 
-  const navLinks = [
+  const mainNavLinks = [
     { href: "/#features", label: t("features") },
     { href: "/#pricing", label: t("pricing") },
-    { href: "/analyze", label: t("analyze") },
-    { href: "/compare", label: t("compare") },
   ];
 
   return (
     <header
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         scrolled
-          ? "border-b border-border/50 bg-background/85 backdrop-blur-xl shadow-sm shadow-black/5"
+          ? "border-b border-border/50 bg-background/90 backdrop-blur-xl shadow-sm shadow-black/5"
           : isLanding
           ? "bg-transparent"
-          : "border-b border-border/50 bg-background/85 backdrop-blur-xl"
+          : "border-b border-border/50 bg-background/90 backdrop-blur-xl"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -106,7 +139,7 @@ export function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-0.5 md:flex">
-          {navLinks.map((link) => (
+          {mainNavLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -115,6 +148,43 @@ export function Header() {
               {link.label}
             </Link>
           ))}
+
+          {/* Tools dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground">
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                  {t("tools")}
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </button>
+              }
+            />
+            <DropdownMenuContent align="start" className="w-[480px] p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1 pb-2">
+                {t("toolsSubtitle")}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {toolList.map((tool) => (
+                  <DropdownMenuItem
+                    key={tool.href}
+                    className="p-0 focus:bg-transparent"
+                    onClick={() => router.push(tool.href as "/")}
+                  >
+                    <div className="flex items-start gap-3 rounded-lg p-3 hover:bg-accent transition-colors cursor-pointer w-full">
+                      <div className={`rounded-lg p-2 shrink-0 ${tool.bg}`}>
+                        <tool.icon className={`h-4 w-4 ${tool.color}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{tool.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{tool.desc}</p>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </nav>
 
         <div className="flex items-center gap-1.5">
@@ -183,10 +253,7 @@ export function Header() {
             <SheetTrigger
               render={
                 <Button variant="ghost" size="icon" className="md:hidden">
-                  <motion.div
-                    animate={{ rotate: open ? 90 : 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
+                  <motion.div animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.2 }}>
                     {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                   </motion.div>
                 </Button>
@@ -194,20 +261,43 @@ export function Header() {
             />
             <SheetContent side="right" className="w-72">
               <SheetTitle className="sr-only">Navigation</SheetTitle>
-              <div className="flex flex-col gap-6 pt-8">
+              <div className="flex flex-col gap-5 pt-8">
                 <AnimatedLogo size="sm" />
-                <nav className="flex flex-col gap-1">
-                  {navLinks.map((link) => (
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 mb-2">
+                    {t("toolsSubtitle")}
+                  </p>
+                  <nav className="flex flex-col gap-1">
+                    {toolList.map((tool) => (
+                      <Link
+                        key={tool.href}
+                        href={tool.href}
+                        onClick={() => setOpen(false)}
+                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <div className={`rounded-md p-1.5 ${tool.bg}`}>
+                          <tool.icon className={`h-3.5 w-3.5 ${tool.color}`} />
+                        </div>
+                        {tool.label}
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
+
+                <div className="flex flex-col gap-1 border-t pt-3">
+                  {mainNavLinks.map((link) => (
                     <Link
                       key={link.href}
                       href={link.href}
                       onClick={() => setOpen(false)}
-                      className="rounded-lg px-3 py-2.5 text-base font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
                       {link.label}
                     </Link>
                   ))}
-                </nav>
+                </div>
+
                 <div className="flex flex-col gap-2 border-t pt-4">
                   {user ? (
                     <>
@@ -238,10 +328,7 @@ export function Header() {
                     </>
                   ) : (
                     <>
-                      <Button
-                        variant="outline"
-                        nativeButton={false} render={<Link href="/login" onClick={() => setOpen(false)} />}
-                      >
+                      <Button variant="outline" nativeButton={false} render={<Link href="/login" onClick={() => setOpen(false)} />}>
                         {t("login")}
                       </Button>
                       <Button
@@ -261,3 +348,4 @@ export function Header() {
     </header>
   );
 }
+

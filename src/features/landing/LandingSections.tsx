@@ -15,6 +15,10 @@ import {
   XCircle,
   MessageSquare,
   ChevronDown,
+  ShieldAlert,
+  Wallet,
+  GitCompare,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -39,6 +43,147 @@ const stagger = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1 } },
 };
+
+// ============================================================================
+// Tools Showcase Section (4 modules)
+// ============================================================================
+export function ToolsShowcaseSection() {
+  const t = useTranslations("landing.tools");
+
+  const toolCards = [
+    {
+      href: "/analyze",
+      icon: Search,
+      color: "from-indigo-500 to-violet-600",
+      shadow: "shadow-indigo-500/25",
+      bg: "from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20",
+      border: "border-indigo-100 dark:border-indigo-900/50",
+      badge: "text-indigo-600 bg-indigo-50 border-indigo-200 dark:text-indigo-400 dark:border-indigo-800",
+      label: t("analyzeLabel"),
+      title: t("analyzeTitle"),
+      desc: t("analyzeDesc"),
+      features: [t("analyzeF1"), t("analyzeF2"), t("analyzeF3")],
+    },
+    {
+      href: "/compare",
+      icon: GitCompare,
+      color: "from-blue-500 to-cyan-600",
+      shadow: "shadow-blue-500/25",
+      bg: "from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20",
+      border: "border-blue-100 dark:border-blue-900/50",
+      badge: "text-blue-600 bg-blue-50 border-blue-200 dark:text-blue-400 dark:border-blue-800",
+      label: t("compareLabel"),
+      title: t("compareTitle"),
+      desc: t("compareDesc"),
+      features: [t("compareF1"), t("compareF2"), t("compareF3")],
+    },
+    {
+      href: "/fake-detector",
+      icon: ShieldAlert,
+      color: "from-amber-500 to-orange-600",
+      shadow: "shadow-amber-500/25",
+      bg: "from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20",
+      border: "border-amber-100 dark:border-amber-900/50",
+      badge: "text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:border-amber-800",
+      label: t("fakeLabel"),
+      title: t("fakeTitle"),
+      desc: t("fakeDesc"),
+      features: [t("fakeF1"), t("fakeF2"), t("fakeF3")],
+      isNew: true,
+    },
+    {
+      href: "/budget-optimizer",
+      icon: Wallet,
+      color: "from-violet-500 to-purple-600",
+      shadow: "shadow-violet-500/25",
+      bg: "from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20",
+      border: "border-violet-100 dark:border-violet-900/50",
+      badge: "text-violet-600 bg-violet-50 border-violet-200 dark:text-violet-400 dark:border-violet-800",
+      label: t("budgetLabel"),
+      title: t("budgetTitle"),
+      desc: t("budgetDesc"),
+      features: [t("budgetF1"), t("budgetF2"), t("budgetF3")],
+      isNew: true,
+    },
+  ];
+
+  return (
+    <section className="py-20 md:py-28 bg-muted/20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={stagger}
+          className="text-center"
+        >
+          <motion.div variants={fadeUp} custom={0}>
+            <Badge variant="outline" className="mb-4 gap-1.5 border-indigo-200 text-indigo-600 dark:border-indigo-800 dark:text-indigo-400">
+              <Sparkles className="h-3 w-3" />
+              {t("badge")}
+            </Badge>
+          </motion.div>
+          <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl lg:text-5xl">
+            {t("title")}{" "}
+            <span className="bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 bg-clip-text text-transparent">
+              {t("titleHighlight")}
+            </span>
+          </motion.h2>
+          <motion.p variants={fadeUp} custom={2} className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            {t("subtitle")}
+          </motion.p>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          variants={stagger}
+          className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          {toolCards.map((tool, i) => (
+            <motion.div key={i} variants={fadeUp} custom={i}>
+              <Link href={tool.href} className="group block h-full">
+                <div className={`relative h-full rounded-2xl border bg-gradient-to-br p-5 transition-all duration-300 hover:shadow-xl hover:-translate-y-1.5 ${tool.bg} ${tool.border}`}>
+                  {tool.isNew && (
+                    <span className="absolute -top-2.5 right-4 rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md">
+                      NEW
+                    </span>
+                  )}
+
+                  <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${tool.color} shadow-lg ${tool.shadow}`}>
+                    <tool.icon className="h-5 w-5 text-white" />
+                  </div>
+
+                  <span className={`mb-2 inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${tool.badge}`}>
+                    {tool.label}
+                  </span>
+
+                  <h3 className="mt-2 text-base font-bold leading-snug">{tool.title}</h3>
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{tool.desc}</p>
+
+                  <ul className="mt-4 space-y-1.5">
+                    {tool.features.map((feat, j) => (
+                      <li key={j} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                        {feat}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-5 flex items-center gap-1 text-sm font-semibold text-foreground group-hover:gap-2 transition-all">
+                    {t("tryNow")}
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
 
 // ============================================================================
 // Problem Section
