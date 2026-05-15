@@ -1,23 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/navigation";
 import { motion } from "framer-motion";
 import { ArrowRight, Link2, Image, Type, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const tabs = [
-  { value: "url", label: "URL", icon: Link2, placeholder: "https://amazon.de/dp/..." },
-  { value: "text", label: "Product Name", icon: Type, placeholder: "iPhone 16 Pro Max 256GB" },
-  { value: "image", label: "Image", icon: Image, placeholder: "Upload a product image" },
-] as const;
+import { useTranslations } from "next-intl";
 
 export function HeroInput() {
+  const t = useTranslations("hero");
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("url");
   const [value, setValue] = useState("");
+
+  const tabs = [
+    { value: "url", label: t("urlTab"), icon: Link2, placeholder: t("urlPlaceholder") },
+    { value: "text", label: t("textTab"), icon: Type, placeholder: t("textPlaceholder") },
+    { value: "image", label: t("imageTab"), icon: Image, placeholder: t("imagePlaceholder") },
+  ] as const;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -26,7 +28,7 @@ export function HeroInput() {
       type: activeTab,
       q: value.trim(),
     });
-    router.push(`/analyze?${params.toString()}`);
+    router.push(`/analyze?${params.toString()}` as Parameters<typeof router.push>[0]);
   }
 
   return (
@@ -67,14 +69,14 @@ export function HeroInput() {
             disabled={!value.trim()}
             className="absolute right-2 h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all hover:from-indigo-600 hover:to-violet-700 hover:shadow-indigo-500/40 disabled:opacity-50"
           >
-            Analyze
+            {t("analyzeButton")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </form>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Free - no signup required. 3 analyses per day.
+        {t("freeNote")}
       </p>
     </motion.div>
   );

@@ -15,10 +15,10 @@ export default function NotFound() {
           The page you are looking for does not exist or has been moved.
         </p>
         <div className="mt-6 flex gap-3">
-          <Button render={<Link href="/" />}>
+          <Button nativeButton={false} render={<Link href="/" />}>
             Go Home
           </Button>
-          <Button variant="outline" render={<Link href="/analyze" />}>
+          <Button variant="outline" nativeButton={false} render={<Link href="/analyze" />}>
             <Search className="mr-2 h-4 w-4" />
             Analyze a Product
           </Button>

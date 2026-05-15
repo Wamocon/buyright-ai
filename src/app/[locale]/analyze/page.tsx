@@ -9,16 +9,18 @@ import type { AnalysisResult } from "@/types";
 
 function AnalyzeContent() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [checkId, setCheckId] = useState<string | undefined>();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 md:py-12">
       {result ? (
         <ResultsDisplay
           result={result}
-          onNewAnalysis={() => setResult(null)}
+          checkId={checkId}
+          onNewAnalysis={() => { setResult(null); setCheckId(undefined); }}
         />
       ) : (
-        <AnalysisForm onResult={setResult} />
+        <AnalysisForm onResult={(r, id) => { setResult(r); setCheckId(id); }} />
       )}
     </div>
   );

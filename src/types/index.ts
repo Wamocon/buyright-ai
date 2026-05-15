@@ -8,10 +8,22 @@ export type SubscriptionTier = "free" | "pro";
 
 export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing";
 
+export type UserSentiment = "Very Positive" | "Positive" | "Mixed" | "Negative" | "Very Negative";
+
 export interface Alternative {
   name: string;
   price_range: string;
   why_better: string;
+}
+
+export interface RatingCategory {
+  name: string;
+  score: number; // 0-10
+}
+
+export interface TechSpec {
+  name: string;
+  value: string;
 }
 
 export interface AnalysisResult {
@@ -28,6 +40,36 @@ export interface AnalysisResult {
   alternatives: Alternative[];
   recommendation: Recommendation;
   recommendation_detail: string;
+  // Rich analysis fields
+  rating_breakdown: RatingCategory[];
+  technical_specs: TechSpec[];
+  user_sentiment: UserSentiment;
+  common_complaints: string[];
+  best_for: string[];
+  not_suitable_for: string[];
+}
+
+export interface CategoryComparison {
+  category: string;
+  winner: "A" | "B" | "Tie";
+  a_score: number;
+  b_score: number;
+  detail: string;
+}
+
+export interface ComparisonVerdict {
+  winner: "A" | "B" | "Tie";
+  winner_name: string;
+  verdict_summary: string;
+  buy_recommendation: string;
+  price_verdict: string;
+  category_comparisons: CategoryComparison[];
+}
+
+export interface ComparisonResult {
+  product_a: AnalysisResult;
+  product_b: AnalysisResult;
+  verdict: ComparisonVerdict;
 }
 
 export interface AnalysisRequest {

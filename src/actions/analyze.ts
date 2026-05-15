@@ -10,6 +10,7 @@ import type { AnalysisResult } from "@/types";
 export interface AnalyzeActionResult {
   success: boolean;
   data?: AnalysisResult;
+  checkId?: string;
   error?: string;
   rateLimitExceeded?: boolean;
   remaining?: number;
@@ -22,6 +23,7 @@ export async function analyzeAction(
     const type = formData.get("type") as string;
     const value = formData.get("value") as string;
     const imageUrl = formData.get("imageUrl") as string | null;
+    const locale = (formData.get("locale") as string) || "en";
 
     // Validate input
     const parsed = analysisRequestSchema.safeParse({
@@ -65,6 +67,7 @@ export async function analyzeAction(
       parsed.data.type,
       parsed.data.value,
       parsed.data.imageUrl,
+      locale,
     );
 
     // Increment usage
@@ -72,7 +75,7 @@ export async function analyzeAction(
 
     // Store the check in the database (using service client to bypass RLS for anonymous)
     const serviceClient = await createServiceClient();
-    await serviceClient.from("product_checks").insert({
+    const { data: insertedCheck } = await serviceClient.from("product_checks").insert({
       user_id: user?.id ?? null,
       anonymous_ip: user ? null : ip,
       input_type: parsed.data.type,
@@ -81,11 +84,12 @@ export async function analyzeAction(
       result: result as unknown as Record<string, unknown>,
       score: result.score,
       recommendation: result.recommendation,
-    });
+    }).select("id").single();
 
     return {
       success: true,
       data: result,
+      checkId: insertedCheck?.id ?? undefined,
       remaining: rateCheck.remaining - 1,
     };
   } catch (error) {

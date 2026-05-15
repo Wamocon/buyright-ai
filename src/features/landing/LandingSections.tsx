@@ -19,8 +19,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
+import { Link } from "@/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 // ============================================================================
 // Animation variants
@@ -43,10 +44,12 @@ const stagger = {
 // Problem Section
 // ============================================================================
 export function ProblemSection() {
+  const t = useTranslations("landing.problem");
+
   const problems = [
-    { icon: XCircle, text: "72% of online reviews are fake or manipulated", color: "text-red-500" },
-    { icon: AlertTriangle, text: "Average consumer wastes $1,200/year on bad purchases", color: "text-amber-500" },
-    { icon: Eye, text: "Sponsored results hide better, cheaper alternatives", color: "text-orange-500" },
+    { icon: XCircle, text: t("stat1"), color: "text-red-500" },
+    { icon: AlertTriangle, text: t("stat2"), color: "text-amber-500" },
+    { icon: Eye, text: t("stat3"), color: "text-orange-500" },
   ];
 
   return (
@@ -61,7 +64,7 @@ export function ProblemSection() {
         >
           <motion.div variants={fadeUp} custom={0}>
             <Badge variant="outline" className="mb-4 border-red-200 text-red-600 dark:border-red-800 dark:text-red-400">
-              The Problem
+              {t("badge")}
             </Badge>
           </motion.div>
           <motion.h2
@@ -69,16 +72,15 @@ export function ProblemSection() {
             custom={1}
             className="text-3xl font-bold tracking-tight md:text-4xl"
           >
-            Online shopping is a{" "}
-            <span className="text-red-500">minefield</span>
+            {t("title")}{" "}
+            <span className="text-red-500">{t("titleHighlight")}</span>
           </motion.h2>
           <motion.p
             variants={fadeUp}
             custom={2}
             className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground"
           >
-            Fake reviews, hidden costs, and manipulated rankings make it nearly
-            impossible to know if you are getting a good deal.
+            {t("subtitle")}
           </motion.p>
         </motion.div>
 
@@ -109,27 +111,13 @@ export function ProblemSection() {
 // Benefits Section
 // ============================================================================
 export function BenefitsSection() {
+  const t = useTranslations("landing.benefits");
+
   const benefits = [
-    {
-      icon: Shield,
-      title: "Scam Protection",
-      description: "AI detects fake reviews, suspicious pricing, and known scam patterns.",
-    },
-    {
-      icon: Zap,
-      title: "Instant Analysis",
-      description: "Get a comprehensive product analysis in under 10 seconds.",
-    },
-    {
-      icon: TrendingUp,
-      title: "Smart Alternatives",
-      description: "Discover better products at the same or lower price point.",
-    },
-    {
-      icon: BarChart3,
-      title: "Clear Score",
-      description: "One score from 0-100. BUY, DON'T BUY, or ONLY IF. No ambiguity.",
-    },
+    { icon: Shield, title: t("scamTitle"), description: t("scamDesc") },
+    { icon: Zap, title: t("instantTitle"), description: t("instantDesc") },
+    { icon: TrendingUp, title: t("alternativesTitle"), description: t("alternativesDesc") },
+    { icon: BarChart3, title: t("scoreTitle"), description: t("scoreDesc") },
   ];
 
   return (
@@ -144,7 +132,7 @@ export function BenefitsSection() {
         >
           <motion.div variants={fadeUp} custom={0}>
             <Badge variant="outline" className="mb-4 border-emerald-200 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400">
-              Why BuyRight AI
+              {t("badge")}
             </Badge>
           </motion.div>
           <motion.h2
@@ -152,9 +140,9 @@ export function BenefitsSection() {
             custom={1}
             className="text-3xl font-bold tracking-tight md:text-4xl"
           >
-            Your AI-powered{" "}
+            {t("title")}{" "}
             <span className="bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">
-              purchase advisor
+              {t("titleHighlight")}
             </span>
           </motion.h2>
         </motion.div>
@@ -174,9 +162,7 @@ export function BenefitsSection() {
                     <benefit.icon className="h-6 w-6 text-indigo-500" />
                   </div>
                   <h3 className="text-lg font-semibold">{benefit.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {benefit.description}
-                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">{benefit.description}</p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -191,25 +177,12 @@ export function BenefitsSection() {
 // How It Works Section
 // ============================================================================
 export function HowItWorksSection() {
+  const t = useTranslations("landing.howItWorks");
+
   const steps = [
-    {
-      num: "01",
-      icon: Search,
-      title: "Paste or Upload",
-      description: "Enter a product URL, name, or upload a photo of the product.",
-    },
-    {
-      num: "02",
-      icon: Zap,
-      title: "AI Analyzes",
-      description: "Our AI examines price, quality, reviews, risks, and market position.",
-    },
-    {
-      num: "03",
-      icon: Star,
-      title: "Get Your Score",
-      description: "Receive a clear 0-100 score with BUY / DON'T BUY recommendation.",
-    },
+    { num: "01", icon: Search, title: t("step1Title"), description: t("step1Desc") },
+    { num: "02", icon: Zap, title: t("step2Title"), description: t("step2Desc") },
+    { num: "03", icon: Star, title: t("step3Title"), description: t("step3Desc") },
   ];
 
   return (
@@ -223,16 +196,16 @@ export function HowItWorksSection() {
           className="text-center"
         >
           <motion.div variants={fadeUp} custom={0}>
-            <Badge variant="outline" className="mb-4">How It Works</Badge>
+            <Badge variant="outline" className="mb-4">{t("badge")}</Badge>
           </motion.div>
           <motion.h2
             variants={fadeUp}
             custom={1}
             className="text-3xl font-bold tracking-tight md:text-4xl"
           >
-            Three steps to a{" "}
+            {t("title")}{" "}
             <span className="bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">
-              smarter purchase
+              {t("titleHighlight")}
             </span>
           </motion.h2>
         </motion.div>
@@ -250,12 +223,10 @@ export function HowItWorksSection() {
                 <step.icon className="h-7 w-7 text-white" />
               </div>
               <span className="text-xs font-bold uppercase tracking-widest text-indigo-500">
-                Step {step.num}
+                {t("step")} {step.num}
               </span>
               <h3 className="mt-2 text-xl font-bold">{step.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {step.description}
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">{step.description}</p>
               {i < steps.length - 1 && (
                 <ArrowRight className="absolute -right-4 top-8 hidden h-5 w-5 text-muted-foreground/30 md:block" />
               )}
@@ -268,9 +239,11 @@ export function HowItWorksSection() {
 }
 
 // ============================================================================
-// Demo Analysis Section
+// Demo Section
 // ============================================================================
 export function DemoSection() {
+  const t = useTranslations("landing.demo");
+
   return (
     <section className="py-20 md:py-28 bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -282,10 +255,10 @@ export function DemoSection() {
           className="text-center"
         >
           <motion.div variants={fadeUp} custom={0}>
-            <Badge variant="outline" className="mb-4">Live Demo</Badge>
+            <Badge variant="outline" className="mb-4">{t("badge")}</Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl">
-            See it in action
+            {t("title")}
           </motion.h2>
         </motion.div>
 
@@ -298,13 +271,12 @@ export function DemoSection() {
         >
           <Card className="overflow-hidden border-2 border-indigo-100 dark:border-indigo-900/30">
             <CardContent className="p-0">
-              {/* Mock result header */}
               <div className="border-b bg-gradient-to-r from-indigo-500/5 to-violet-500/5 p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Analysis Result</p>
+                    <p className="text-sm text-muted-foreground">{t("resultLabel")}</p>
                     <h3 className="text-xl font-bold">Sony WH-1000XM5</h3>
-                    <p className="text-sm text-muted-foreground">Premium Noise-Cancelling Headphones</p>
+                    <p className="text-sm text-muted-foreground">{t("productDesc")}</p>
                   </div>
                   <div className="flex flex-col items-center">
                     <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-500 shadow-lg shadow-emerald-500/25">
@@ -316,25 +288,24 @@ export function DemoSection() {
                   </div>
                 </div>
               </div>
-              {/* Mock details */}
               <div className="grid gap-4 p-6 md:grid-cols-2">
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-emerald-600">
-                    <CheckCircle2 className="h-4 w-4" /> Pros
+                    <CheckCircle2 className="h-4 w-4" /> {t("pros")}
                   </h4>
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    <li>Industry-leading noise cancellation</li>
-                    <li>30h battery life</li>
-                    <li>Multipoint Bluetooth connection</li>
+                    <li>{t("pro1")}</li>
+                    <li>{t("pro2")}</li>
+                    <li>{t("pro3")}</li>
                   </ul>
                 </div>
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-red-500">
-                    <XCircle className="h-4 w-4" /> Cons
+                    <XCircle className="h-4 w-4" /> {t("cons")}
                   </h4>
                   <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    <li>Premium price point ($350+)</li>
-                    <li>No IP rating for water resistance</li>
+                    <li>{t("con1")}</li>
+                    <li>{t("con2")}</li>
                   </ul>
                 </div>
               </div>
@@ -350,13 +321,15 @@ export function DemoSection() {
 // Features Section
 // ============================================================================
 export function FeaturesSection() {
+  const t = useTranslations("landing.features");
+
   const features = [
-    { icon: Shield, title: "Scam Detection", desc: "AI identifies fake reviews and suspicious patterns" },
-    { icon: BarChart3, title: "Price Analysis", desc: "Know if you are paying too much" },
-    { icon: TrendingUp, title: "Better Alternatives", desc: "Discover products you did not know existed" },
-    { icon: Zap, title: "10-Second Analysis", desc: "Results faster than reading one review" },
-    { icon: Eye, title: "Image Analysis", desc: "Upload a photo, get instant insights" },
-    { icon: Star, title: "Score 0-100", desc: "One number that tells the whole story" },
+    { icon: Shield, title: t("scamTitle"), desc: t("scamDesc") },
+    { icon: BarChart3, title: t("priceTitle"), desc: t("priceDesc") },
+    { icon: TrendingUp, title: t("altTitle"), desc: t("altDesc") },
+    { icon: Zap, title: t("fastTitle"), desc: t("fastDesc") },
+    { icon: Eye, title: t("imageTitle"), desc: t("imageDesc") },
+    { icon: Star, title: t("scoreTitle"), desc: t("scoreDesc") },
   ];
 
   return (
@@ -370,12 +343,12 @@ export function FeaturesSection() {
           className="text-center"
         >
           <motion.div variants={fadeUp} custom={0}>
-            <Badge variant="outline" className="mb-4">Features</Badge>
+            <Badge variant="outline" className="mb-4">{t("badge")}</Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl">
-            Everything you need to{" "}
+            {t("title")}{" "}
             <span className="bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">
-              shop smarter
+              {t("titleHighlight")}
             </span>
           </motion.h2>
         </motion.div>
@@ -412,35 +385,25 @@ export function FeaturesSection() {
 // Pricing Section
 // ============================================================================
 export function PricingSection() {
+  const t = useTranslations("landing.pricing");
+
   const plans = [
     {
-      name: "Free",
+      name: t("freeName"),
       price: "0",
-      description: "Try BuyRight AI",
-      features: [
-        "3 product checks per day",
-        "Basic analysis",
-        "2 alternatives",
-        "No signup required",
-      ],
-      cta: "Start Free",
+      description: t("freeDesc"),
+      features: [t("freef1"), t("freef2"), t("freef3"), t("freef4")],
+      cta: t("freeCta"),
       href: "/analyze",
       highlighted: false,
     },
     {
-      name: "Pro",
+      name: t("proName"),
       price: "9.99",
-      description: "For smart shoppers",
-      features: [
-        "Unlimited product checks",
-        "Deep analysis",
-        "Up to 5 alternatives",
-        "PDF export",
-        "Full history",
-        "Priority processing",
-      ],
-      cta: "Start Pro",
-      href: "/signup",
+      description: t("proDesc"),
+      features: [t("prof1"), t("prof2"), t("prof3"), t("prof4"), t("prof5"), t("prof6")],
+      cta: t("proCta"),
+      href: "/login",
       highlighted: true,
     },
   ];
@@ -456,13 +419,13 @@ export function PricingSection() {
           className="text-center"
         >
           <motion.div variants={fadeUp} custom={0}>
-            <Badge variant="outline" className="mb-4">Pricing</Badge>
+            <Badge variant="outline" className="mb-4">{t("badge")}</Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl">
-            Simple, transparent pricing
+            {t("title")}
           </motion.h2>
           <motion.p variants={fadeUp} custom={2} className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-            Start free. Upgrade when you need more.
+            {t("subtitle")}
           </motion.p>
         </motion.div>
 
@@ -485,7 +448,7 @@ export function PricingSection() {
                 {plan.highlighted && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white px-4">
-                      Most Popular
+                      {t("mostPopular")}
                     </Badge>
                   </div>
                 )}
@@ -495,7 +458,7 @@ export function PricingSection() {
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="text-4xl font-bold">${plan.price}</span>
                     {plan.price !== "0" && (
-                      <span className="text-sm text-muted-foreground">/month</span>
+                      <span className="text-sm text-muted-foreground">{t("perMonth")}</span>
                     )}
                   </div>
                   <ul className="mt-6 space-y-3">
@@ -513,7 +476,7 @@ export function PricingSection() {
                         : ""
                     }`}
                     variant={plan.highlighted ? "default" : "outline"}
-                    render={<Link href={plan.href} />}
+                    nativeButton={false} render={<Link href={plan.href as Parameters<typeof Link>[0]["href"]} />}
                   >
                     {plan.cta}
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -532,25 +495,12 @@ export function PricingSection() {
 // Testimonials Section
 // ============================================================================
 export function TestimonialsSection() {
+  const t = useTranslations("landing.testimonials");
+
   const testimonials = [
-    {
-      name: "Sarah K.",
-      role: "Online Shopper",
-      text: "BuyRight AI saved me from buying a laptop with known overheating issues. The alternatives it suggested were actually better and cheaper!",
-      rating: 5,
-    },
-    {
-      name: "Marco T.",
-      role: "Tech Enthusiast",
-      text: "I use it before every purchase now. The scam detection alone is worth it. Caught a fake 'deal' that had manipulated reviews.",
-      rating: 5,
-    },
-    {
-      name: "Lisa M.",
-      role: "Smart Shopper",
-      text: "Simple, fast, and accurate. I love the clear BUY/DON'T BUY recommendation. No more analysis paralysis.",
-      rating: 5,
-    },
+    { name: t("t1Name"), role: t("t1Role"), text: t("t1Text"), rating: 5 },
+    { name: t("t2Name"), role: t("t2Role"), text: t("t2Text"), rating: 5 },
+    { name: t("t3Name"), role: t("t3Role"), text: t("t3Text"), rating: 5 },
   ];
 
   return (
@@ -566,11 +516,11 @@ export function TestimonialsSection() {
           <motion.div variants={fadeUp} custom={0}>
             <Badge variant="outline" className="mb-4">
               <MessageSquare className="mr-1 h-3 w-3" />
-              Testimonials
+              {t("badge")}
             </Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl">
-            Loved by smart shoppers
+            {t("title")}
           </motion.h2>
         </motion.div>
 
@@ -611,27 +561,14 @@ export function TestimonialsSection() {
 // FAQ Section
 // ============================================================================
 export function FAQSection() {
+  const t = useTranslations("landing.faq");
+
   const faqs = [
-    {
-      q: "How does BuyRight AI work?",
-      a: "Our AI analyzes products using multiple data points: price history, review patterns, quality indicators, and market comparison. It then generates a comprehensive score and recommendation.",
-    },
-    {
-      q: "Is it really free?",
-      a: "Yes! You get 3 free product analyses per day without any signup. The Pro plan offers unlimited checks and additional features.",
-    },
-    {
-      q: "What products can I analyze?",
-      a: "Almost anything sold online: electronics, appliances, fashion, tools, home goods, and more. Just paste a URL, type a product name, or upload an image.",
-    },
-    {
-      q: "How accurate is the AI?",
-      a: "Our AI is powered by advanced language models and uses real market data. While no system is perfect, our analysis provides a reliable starting point for purchase decisions.",
-    },
-    {
-      q: "Is my data safe?",
-      a: "Absolutely. We are GDPR compliant, do not sell your data, and uploaded images are automatically deleted after analysis. See our privacy policy for details.",
-    },
+    { q: t("q1"), a: t("a1") },
+    { q: t("q2"), a: t("a2") },
+    { q: t("q3"), a: t("a3") },
+    { q: t("q4"), a: t("a4") },
+    { q: t("q5"), a: t("a5") },
   ];
 
   return (
@@ -645,10 +582,10 @@ export function FAQSection() {
           className="text-center"
         >
           <motion.div variants={fadeUp} custom={0}>
-            <Badge variant="outline" className="mb-4">FAQ</Badge>
+            <Badge variant="outline" className="mb-4">{t("badge")}</Badge>
           </motion.div>
           <motion.h2 variants={fadeUp} custom={1} className="text-3xl font-bold tracking-tight md:text-4xl">
-            Frequently asked questions
+            {t("title")}
           </motion.h2>
         </motion.div>
 
@@ -694,6 +631,8 @@ function FAQItem({ question, answer, index }: { question: string; answer: string
 // CTA Section
 // ============================================================================
 export function CTASection() {
+  const t = useTranslations("landing.cta");
+
   return (
     <section className="py-20 md:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -706,29 +645,24 @@ export function CTASection() {
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)]" />
           <div className="relative">
-            <h2 className="text-3xl font-bold md:text-4xl">
-              Stop guessing. Start buying smart.
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">
-              Join thousands of smart shoppers who check before they buy.
-              Free, no signup required.
-            </p>
+            <h2 className="text-3xl font-bold md:text-4xl">{t("title")}</h2>
+            <p className="mx-auto mt-4 max-w-xl text-lg text-indigo-100">{t("subtitle")}</p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
                 className="bg-white text-indigo-600 hover:bg-indigo-50 shadow-xl"
-                render={<Link href="/analyze" />}
+                nativeButton={false} render={<Link href="/analyze" />}
               >
-                Start Free Analysis
+                {t("startFree")}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
                 className="border-white/30 text-white hover:bg-white/10"
-                render={<Link href="/#pricing" />}
+                nativeButton={false} render={<Link href="/#pricing" />}
               >
-                View Pricing
+                {t("viewPricing")}
               </Button>
             </div>
           </div>
@@ -737,3 +671,5 @@ export function CTASection() {
     </section>
   );
 }
+
+// ...existing code...

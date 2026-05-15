@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Link2,
@@ -26,18 +28,13 @@ import type { AnalysisResult, InputType } from "@/types";
 import { toast } from "sonner";
 
 interface AnalysisFormProps {
-  onResult: (result: AnalysisResult) => void;
+  onResult: (result: AnalysisResult, checkId?: string) => void;
 }
 
-const analysisSteps = [
-  "Identifying product...",
-  "Analyzing reviews and quality...",
-  "Checking risks and scam indicators...",
-  "Finding better alternatives...",
-  "Generating recommendation...",
-];
-
 export function AnalysisForm({ onResult }: AnalysisFormProps) {
+  const t = useTranslations("analyze");
+  const locale = useLocale();
+  const analysisSteps = [t("step1"), t("step2"), t("step3"), t("step4")];
   const searchParams = useSearchParams();
   const initialType = (searchParams.get("type") as InputType) || "url";
   const initialQuery = searchParams.get("q") ?? "";
@@ -53,11 +50,11 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
 
   const handleImageFile = useCallback((file: File) => {
     if (!UPLOAD_CONFIG.acceptedFormats.includes(file.type as typeof UPLOAD_CONFIG.acceptedFormats[number])) {
-      toast.error("Please upload a JPG, PNG, or WebP image.");
+      toast.error(t("invalidImageFormat"));
       return;
     }
     if (file.size > UPLOAD_CONFIG.maxSizeBytes) {
-      toast.error("Image must be under 10MB.");
+      toast.error(t("imageTooLarge"));
       return;
     }
     setImageFile(file);
@@ -89,6 +86,7 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
 
     const formData = new FormData();
     formData.set("type", activeTab);
+    formData.set("locale", locale);
 
     if (activeTab === "url") {
       formData.set("value", urlValue);
@@ -111,19 +109,19 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
           setCurrentStep(analysisSteps.length - 1);
           setTimeout(() => {
             setIsAnalyzing(false);
-            onResult(result.data!);
+            onResult(result.data!, result.checkId);
           }, 500);
         } else if (result.rateLimitExceeded) {
           setIsAnalyzing(false);
-          toast.error("Daily limit reached. Upgrade to Pro for unlimited analyses.");
+          toast.error(t("limitReached"));
         } else {
           setIsAnalyzing(false);
-          toast.error(result.error ?? "Analysis failed. Please try again.");
+          toast.error(result.error ?? t("failed"));
         }
       } catch {
         clearInterval(stepInterval);
         setIsAnalyzing(false);
-        toast.error("An unexpected error occurred. Please try again.");
+        toast.error(t("unexpectedError"));
       }
     });
   }
@@ -139,9 +137,9 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/25">
             <Shield className="h-7 w-7 text-white" />
           </div>
-          <h2 className="text-2xl font-bold">Analyze a Product</h2>
+          <h2 className="text-2xl font-bold">{t("title")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Paste a URL, type a product name, or upload an image
+            {t("subtitle")}
           </p>
         </div>
 
@@ -149,15 +147,15 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="url" className="gap-2">
               <Link2 className="h-4 w-4" />
-              <span className="hidden sm:inline">URL</span>
+              <span className="hidden sm:inline">{t("urlTab")}</span>
             </TabsTrigger>
             <TabsTrigger value="text" className="gap-2">
               <Type className="h-4 w-4" />
-              <span className="hidden sm:inline">Text</span>
+              <span className="hidden sm:inline">{t("textTab")}</span>
             </TabsTrigger>
             <TabsTrigger value="image" className="gap-2">
               <ImageIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Image</span>
+              <span className="hidden sm:inline">{t("imageTab")}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -166,7 +164,7 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
               <Input
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
-                placeholder="https://amazon.de/dp/B0EXAMPLE..."
+                placeholder={t("urlPlaceholder")}
                 className="h-12"
               />
             </TabsContent>
@@ -175,7 +173,7 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
               <Textarea
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
-                placeholder="e.g. iPhone 16 Pro Max 256GB Black"
+                placeholder={t("textPlaceholder")}
                 className="min-h-[80px] resize-none"
                 maxLength={500}
               />
@@ -211,14 +209,14 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
                 >
                   <Upload className="mb-3 h-8 w-8 text-indigo-400" />
                   <p className="text-sm font-medium">
-                    Drag & drop an image here
+                    {t("dragDrop")}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     JPG, PNG, WebP - max 10MB
                   </p>
                   <label className="mt-3">
                     <Button type="button" variant="outline" size="sm" render={<span />}>
-                      Choose File
+                      {t("chooseFile")}
                     </Button>
                     <input
                       type="file"
@@ -249,7 +247,7 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
               ) : (
                 <Sparkles className="mr-2 h-4 w-4" />
               )}
-              Analyze Product
+              {isPending ? t("analyzingButton") : t("analyzeButton")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </form>
@@ -260,6 +258,8 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
 }
 
 function AnalysisLoadingState({ currentStep }: { currentStep: number }) {
+  const t = useTranslations("analyze");
+  const analysisSteps = [t("step1"), t("step2"), t("step3"), t("step4")];
   return (
     <Card className="mx-auto max-w-2xl border-2 border-indigo-100 dark:border-indigo-900/30 shadow-xl shadow-indigo-500/5">
       <CardContent className="p-8 md:p-12">
@@ -271,9 +271,9 @@ function AnalysisLoadingState({ currentStep }: { currentStep: number }) {
           >
             <Sparkles className="h-8 w-8 text-white" />
           </motion.div>
-          <h3 className="text-xl font-bold">AI is analyzing your product...</h3>
+          <h3 className="text-xl font-bold">{t("analyzing")}</h3>
           <p className="mt-2 text-sm text-muted-foreground">
-            This usually takes 5-10 seconds
+            {t("seconds")}
           </p>
         </div>
 

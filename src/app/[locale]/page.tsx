@@ -1,3 +1,4 @@
+import { setRequestLocale, getTranslations } from "next-intl/server";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { HeroInput } from "@/features/landing/HeroInput";
@@ -13,7 +14,15 @@ import {
   CTASection,
 } from "@/features/landing/LandingSections";
 
-export default function Home() {
+export default async function Home({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations("hero");
+
   return (
     <>
       <Header />
@@ -34,19 +43,18 @@ export default function Home() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
               </span>
-              AI-Powered Product Analysis
+              {t("badge")}
             </div>
 
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-              <span className="block">Avoid bad purchases.</span>
+              <span className="block">{t("title1")}</span>
               <span className="block mt-2 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-600 bg-clip-text text-transparent">
-                Buy smarter.
+                {t("title2")}
               </span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-              Paste a product link, upload a photo, or type a product name.
-              Get an instant AI analysis with score, recommendation, and better alternatives.
+              {t("subtitle")}
             </p>
 
             <div className="mt-10">
