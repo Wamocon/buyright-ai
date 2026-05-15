@@ -27,6 +27,55 @@ function tryParseJSON(text: string): unknown | null {
   return null;
 }
 
+function buildFallbackAnalysisResult(
+  inputValue: string,
+  locale: string,
+  reason: string,
+): AnalysisResult {
+  const productName = inputValue.slice(0, 120).trim() || (locale === "de" ? "Unbekanntes Produkt" : "Unknown product");
+  const summary = locale === "de"
+    ? "Für dieses Produkt konnte keine vollständige AI Analyse erstellt werden."
+    : "A complete AI analysis could not be generated for this product.";
+  const warning = locale === "de"
+    ? `Eingeschränkte Analyse: ${reason}`
+    : `Limited analysis: ${reason}`;
+
+  return {
+    product_name: productName,
+    category: locale === "de" ? "Unbekannt" : "Unknown",
+    brand: locale === "de" ? "Nicht erkannt" : "Not identified",
+    score: 50,
+    market_position: "Mid-Range",
+    price_range_typical: locale === "de" ? "Unbekannt" : "Unknown",
+    summary,
+    pros: locale === "de"
+      ? ["Keine kritischen Warnungen bestätigt"]
+      : ["No critical warnings confirmed"],
+    cons: locale === "de"
+      ? ["Zu wenig verifizierbare Daten verfügbar"]
+      : ["Not enough verifiable data available"],
+    warnings: [warning],
+    alternatives: [],
+    recommendation: "ONLY IF",
+    recommendation_detail: locale === "de"
+      ? "Nur kaufen, wenn Sie zusätzlich unabhängige Quellen prüfen."
+      : "Buy only if you verify with independent sources.",
+    rating_breakdown: [
+      { name: "Build Quality", score: 5 },
+      { name: "Performance", score: 5 },
+      { name: "Value for Money", score: 5 },
+      { name: "User Satisfaction", score: 5 },
+      { name: "Reliability", score: 5 },
+      { name: "Features", score: 5 },
+    ],
+    technical_specs: [],
+    user_sentiment: "Mixed",
+    common_complaints: [],
+    best_for: [],
+    not_suitable_for: [],
+  };
+}
+
 // Multi-provider, multi-model fallback for comparison
 async function fetchComparisonVerdict(
   productA: AnalysisResult,
@@ -64,7 +113,7 @@ async function fetchComparisonVerdict(
     }),
     locale,
   );
-  const messages = [
+  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
     { role: "system", content: COMPARISON_SYSTEM_PROMPT },
     { role: "user", content: prompt },
   ];
@@ -74,7 +123,7 @@ async function fetchComparisonVerdict(
     apiKey: string,
     apiUrl: string,
     models: string[],
-    messages: any[],
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
     appUrl: string,
     title: string,
   }): Promise<string> {
@@ -90,7 +139,7 @@ async function fetchComparisonVerdict(
             headers["HTTP-Referer"] = appUrl;
             headers["X-Title"] = title;
           }
-          const body: any = {
+          const body: Record<string, unknown> = {
             model,
             messages,
             temperature: 0.3,
@@ -210,11 +259,35 @@ export async function compareAction(formData: FormData): Promise<CompareActionRe
       }
     }
 
-    // Run both analyses in parallel
-    const [resultA, resultB] = await Promise.all([
+    // Run both analyses in parallel and degrade gracefully if one side fails.
+    const [analysisA, analysisB] = await Promise.allSettled([
       analyzeProduct(parsedA.data.type, parsedA.data.value, parsedA.data.imageUrl, locale),
       analyzeProduct(parsedB.data.type, parsedB.data.value, parsedB.data.imageUrl, locale),
     ]);
+
+    if (analysisA.status === "rejected" && analysisB.status === "rejected") {
+      return {
+        success: false,
+        error: locale === "de"
+          ? "Vergleich derzeit nicht verfügbar. Die AI Provider liefern aktuell keine gültigen Daten."
+          : "Comparison is temporarily unavailable. AI providers are not returning valid data right now.",
+      };
+    }
+
+    const resultA = analysisA.status === "fulfilled"
+      ? analysisA.value
+      : buildFallbackAnalysisResult(
+        parsedA.data.value,
+        locale,
+        analysisA.reason instanceof Error ? analysisA.reason.message : "analysis failed",
+      );
+    const resultB = analysisB.status === "fulfilled"
+      ? analysisB.value
+      : buildFallbackAnalysisResult(
+        parsedB.data.value,
+        locale,
+        analysisB.reason instanceof Error ? analysisB.reason.message : "analysis failed",
+      );
 
     // Store both in product_checks
     const serviceClient = await createServiceClient();

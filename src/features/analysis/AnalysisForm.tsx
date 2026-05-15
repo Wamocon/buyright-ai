@@ -61,7 +61,7 @@ export function AnalysisForm({ onResult }: AnalysisFormProps) {
     const reader = new FileReader();
     reader.onload = (e) => setImagePreview(e.target?.result as string);
     reader.readAsDataURL(file);
-  }, []);
+  }, [t]);
 
   const handleImageDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();

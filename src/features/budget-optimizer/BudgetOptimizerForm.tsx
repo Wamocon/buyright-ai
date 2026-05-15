@@ -3,7 +3,7 @@
 import { useState, useTransition, useRef } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, X, Loader2, Wallet, ChevronDown } from "lucide-react";
+import { Plus, X, Loader2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +47,7 @@ export function BudgetOptimizerForm({ onResult, onCurrencyChange }: BudgetOptimi
   const [step, setStep] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  function handleCurrencyChange(val: string) {
+  function handleCurrencyChange(val: string | null) {
     if (!val) return;
     setCurrency(val);
     onCurrencyChange?.(val);

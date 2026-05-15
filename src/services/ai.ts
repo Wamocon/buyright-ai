@@ -133,6 +133,311 @@ function sanitizeAnalysisResponse(raw: unknown): unknown {
   return obj;
 }
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const n = typeof value === "number"
+    ? value
+    : typeof value === "string"
+      ? Number.parseFloat(value.replace(/[^\d.-]/g, ""))
+      : Number.NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function asStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (typeof entry === "string") return entry.trim();
+      if (entry && typeof entry === "object" && "name" in entry) {
+        const name = (entry as Record<string, unknown>).name;
+        return typeof name === "string" ? name.trim() : "";
+      }
+      return "";
+    })
+    .filter((entry) => entry.length > 0);
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function normalizeRiskLevel(value: unknown): FakeDetectorResult["risk_level"] {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (["LOW", "NIEDRIG"].includes(raw)) return "LOW";
+  if (["MEDIUM", "MITTEL"].includes(raw)) return "MEDIUM";
+  if (["HIGH", "HOCH"].includes(raw)) return "HIGH";
+  if (["CRITICAL", "KRITISCH"].includes(raw)) return "CRITICAL";
+  return "MEDIUM";
+}
+
+function normalizeFakeVerdict(value: unknown): FakeDetectorResult["verdict"] {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (["SAFE", "SICHER"].includes(raw)) return "SAFE";
+  if (["SUSPICIOUS", "SUSPECT", "VERDAECHTIG", "VERDÄCHTIG"].includes(raw)) return "SUSPICIOUS";
+  if (["LIKELY_FAKE", "LIKELY FAKE", "FAKE", "WAHRSCHEINLICH_GEFÄLSCHT", "WAHRSCHEINLICH GEFÄLSCHT"].includes(raw)) {
+    return "LIKELY_FAKE";
+  }
+  return "SUSPICIOUS";
+}
+
+function normalizePriceVerdict(value: unknown): FakeDetectorResult["price_analysis"]["verdict"] {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (["NORMAL", "OK"].includes(raw)) return "NORMAL";
+  if (["SUSPICIOUS", "VERDAECHTIG", "VERDÄCHTIG"].includes(raw)) return "SUSPICIOUS";
+  if (["TOO_GOOD_TO_BE_TRUE", "TOO GOOD TO BE TRUE", "ZU_GUT_UM_WAHR_ZU_SEIN", "ZU GUT UM WAHR ZU SEIN"].includes(raw)) {
+    return "TOO_GOOD_TO_BE_TRUE";
+  }
+  return "NORMAL";
+}
+
+function normalizeBudgetPriority(value: unknown): BudgetOptimizerResult["items"][number]["priority"] {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (["MUST_BUY", "MUST BUY", "MUST", "MUSS", "PFLICHT"].includes(raw)) return "MUST_BUY";
+  if (["SKIP", "IGNORE", "WEGLASSEN", "AUSLASSEN"].includes(raw)) return "SKIP";
+  return "NICE_TO_HAVE";
+}
+
+function buildFallbackFakeDetectorResult(input: string, locale: string): FakeDetectorResult {
+  const productName = input.slice(0, 120).trim() || (locale === "de" ? "Unbekanntes Produkt" : "Unknown product");
+  const summary = locale === "de"
+    ? "Für dieses Produkt konnten aktuell nicht genug verlässliche Live Daten abgerufen werden. Prüfen Sie Verkäuferhistorie, Bewertungen und Preisentwicklung vor dem Kauf zusätzlich manuell."
+    : "Not enough reliable live data could be retrieved for this product right now. Verify seller history, reviews, and price trend manually before purchasing.";
+
+  return {
+    product_name: productName,
+    trust_score: 50,
+    risk_level: "MEDIUM",
+    verdict: "SUSPICIOUS",
+    summary,
+    red_flags: locale === "de"
+      ? ["Unvollständige Live Daten", "Automatische Analyse eingeschränkt"]
+      : ["Incomplete live data", "Automated analysis limited"],
+    positive_signals: locale === "de"
+      ? ["Kein eindeutiger Betrugsnachweis gefunden"]
+      : ["No definitive fraud indicator found"],
+    review_analysis: {
+      authenticity_score: 50,
+      fake_percentage_estimate: 30,
+      suspicious_patterns: locale === "de"
+        ? ["Zu wenige auswertbare Bewertungsmuster"]
+        : ["Insufficient review patterns for high confidence"],
+    },
+    price_analysis: {
+      verdict: "SUSPICIOUS",
+      detail: locale === "de"
+        ? "Preisabweichung konnte nicht verlässlich gegen Marktdaten geprüft werden."
+        : "Price deviation could not be reliably verified against market data.",
+    },
+    seller_indicators: locale === "de"
+      ? ["Zusätzliche Verkäuferprüfung empfohlen"]
+      : ["Additional seller verification recommended"],
+    recommendation: locale === "de"
+      ? "Nur kaufen, wenn Verkäufer, Rückgaberegeln und externe Bewertungen eindeutig vertrauenswürdig sind."
+      : "Buy only if seller profile, return policy, and independent reviews are clearly trustworthy.",
+  };
+}
+
+function sanitizeFakeDetectorResponse(raw: unknown, input: string, locale: string): FakeDetectorResult {
+  const obj = toRecord(raw);
+  const review = toRecord(obj.review_analysis ?? obj.reviews ?? obj.review);
+  const price = toRecord(obj.price_analysis ?? obj.price ?? obj.pricing);
+
+  const fallback = buildFallbackFakeDetectorResult(input, locale);
+  const summary = typeof obj.summary === "string" && obj.summary.trim().length > 0
+    ? obj.summary.trim()
+    : fallback.summary;
+  const recommendation = typeof obj.recommendation === "string" && obj.recommendation.trim().length > 0
+    ? obj.recommendation.trim()
+    : fallback.recommendation;
+
+  return {
+    product_name: typeof obj.product_name === "string" && obj.product_name.trim().length > 0
+      ? obj.product_name.trim()
+      : typeof obj.product === "string" && obj.product.trim().length > 0
+        ? obj.product.trim()
+        : typeof obj.name === "string" && obj.name.trim().length > 0
+          ? obj.name.trim()
+          : fallback.product_name,
+    trust_score: clampNumber(obj.trust_score ?? obj.score, 0, 100, fallback.trust_score),
+    risk_level: normalizeRiskLevel(obj.risk_level ?? obj.risk),
+    verdict: normalizeFakeVerdict(obj.verdict ?? obj.status),
+    summary,
+    red_flags: asStringArray(obj.red_flags ?? obj.warnings ?? obj.risks),
+    positive_signals: asStringArray(obj.positive_signals ?? obj.green_flags ?? obj.positives),
+    review_analysis: {
+      authenticity_score: clampNumber(
+        review.authenticity_score ?? review.score,
+        0,
+        100,
+        fallback.review_analysis.authenticity_score,
+      ),
+      fake_percentage_estimate: clampNumber(
+        review.fake_percentage_estimate ?? review.fake_rate ?? review.fake_probability,
+        0,
+        100,
+        fallback.review_analysis.fake_percentage_estimate,
+      ),
+      suspicious_patterns: asStringArray(review.suspicious_patterns ?? review.patterns),
+    },
+    price_analysis: {
+      verdict: normalizePriceVerdict(price.verdict ?? price.risk),
+      detail: typeof price.detail === "string"
+        ? price.detail
+        : fallback.price_analysis.detail,
+    },
+    seller_indicators: asStringArray(obj.seller_indicators ?? obj.seller_signals),
+    recommendation,
+  };
+}
+
+function buildFallbackBudgetOptimizerResult(
+  budget: number,
+  currency: string,
+  items: string[],
+  locale: string,
+): BudgetOptimizerResult {
+  const cleanItems = items.map((item) => item.trim()).filter(Boolean);
+  const safeItems = cleanItems.length > 0 ? cleanItems : [locale === "de" ? "Grundbedarf" : "Essential item"];
+  const average = Math.max(1, Number((budget / safeItems.length).toFixed(2)));
+  const normalizedBudget = Number.isFinite(budget) && budget > 0 ? budget : average * safeItems.length;
+
+  const resultItems: BudgetOptimizerResult["items"] = safeItems.map((name, index) => {
+    const mustBuyCount = Math.max(1, Math.ceil(safeItems.length / 2));
+    const priority = index < mustBuyCount ? "MUST_BUY" : "NICE_TO_HAVE";
+    return {
+      name,
+      estimated_price: average,
+      priority,
+      priority_score: priority === "MUST_BUY" ? 80 : 60,
+      value_score: 65,
+      reason: locale === "de"
+        ? "Automatisch priorisiert wegen begrenzter Budgetdaten."
+        : "Auto prioritized due to limited budget data.",
+      alternative_suggestion: locale === "de"
+        ? "Preis bei mindestens zwei Händlern vergleichen."
+        : "Compare price across at least two stores.",
+    };
+  });
+
+  return {
+    total_budget: normalizedBudget,
+    total_estimated: Number((average * resultItems.length).toFixed(2)),
+    optimized_total: Number((average * resultItems.length).toFixed(2)),
+    budget_efficiency: 70,
+    savings: 0,
+    summary: locale === "de"
+      ? "Es wurden nicht genug strukturierte AI Daten geliefert, daher wurde ein konservativer Budgetplan erstellt."
+      : "Not enough structured AI data was returned, so a conservative budget plan was generated.",
+    top_advice: locale === "de"
+      ? "Kernartikel zuerst kaufen und optionale Positionen nach Preisvergleich ergänzen."
+      : "Buy essential items first and add optional items after price comparison.",
+    items: resultItems,
+  };
+}
+
+function sanitizeBudgetOptimizerResponse(
+  raw: unknown,
+  budget: number,
+  currency: string,
+  items: string[],
+  locale: string,
+): BudgetOptimizerResult {
+  const obj = toRecord(raw);
+  const fallback = buildFallbackBudgetOptimizerResult(budget, currency, items, locale);
+
+  const rawItems = Array.isArray(obj.items) ? obj.items : [];
+  const normalizedItems: BudgetOptimizerResult["items"] = rawItems
+    .map((entry) => {
+      const item = toRecord(entry);
+      const name = typeof item.name === "string" && item.name.trim().length > 0
+        ? item.name.trim()
+        : typeof item.product === "string" && item.product.trim().length > 0
+          ? item.product.trim()
+          : "";
+      if (!name) return null;
+
+      return {
+        name,
+        estimated_price: clampNumber(item.estimated_price ?? item.price ?? item.cost, 0, 1_000_000, 0),
+        priority: normalizeBudgetPriority(item.priority),
+        priority_score: clampNumber(item.priority_score, 0, 100, 50),
+        value_score: clampNumber(item.value_score, 0, 100, 50),
+        reason: typeof item.reason === "string" ? item.reason : "",
+        alternative_suggestion: typeof item.alternative_suggestion === "string"
+          ? item.alternative_suggestion
+          : typeof item.alternative === "string"
+            ? item.alternative
+            : "",
+      };
+    })
+    .filter((entry): entry is BudgetOptimizerResult["items"][number] => Boolean(entry));
+
+  const totalBudget = clampNumber(obj.total_budget, 0, 1_000_000, fallback.total_budget);
+  const totalEstimated = clampNumber(obj.total_estimated ?? obj.total_cost, 0, 1_000_000, fallback.total_estimated);
+  const optimizedTotal = clampNumber(obj.optimized_total ?? obj.recommended_total, 0, 1_000_000, fallback.optimized_total);
+  const summary = typeof obj.summary === "string" && obj.summary.trim().length > 0
+    ? obj.summary.trim()
+    : fallback.summary;
+
+  return {
+    total_budget: totalBudget,
+    total_estimated: totalEstimated,
+    optimized_total: optimizedTotal,
+    budget_efficiency: clampNumber(obj.budget_efficiency ?? obj.efficiency, 0, 100, fallback.budget_efficiency),
+    savings: clampNumber(obj.savings ?? totalBudget - optimizedTotal, 0, 1_000_000, fallback.savings),
+    summary,
+    top_advice: typeof obj.top_advice === "string" ? obj.top_advice : fallback.top_advice,
+    items: normalizedItems.length > 0 ? normalizedItems : fallback.items,
+  };
+}
+
+function buildFallbackProductAnalysis(type: InputType, value: string, locale: string): AnalysisResult {
+  const fallbackName = type === "image"
+    ? (locale === "de" ? "Hochgeladenes Produktbild" : "Uploaded product image")
+    : value.slice(0, 120).trim() || (locale === "de" ? "Unbekanntes Produkt" : "Unknown product");
+
+  return {
+    product_name: fallbackName,
+    category: locale === "de" ? "Unbekannt" : "Unknown",
+    brand: locale === "de" ? "Nicht erkannt" : "Not identified",
+    score: 50,
+    market_position: "Mid-Range",
+    price_range_typical: locale === "de" ? "Nicht verifizierbar" : "Not verifiable",
+    summary: locale === "de"
+      ? "Aktuell konnten keine ausreichend stabilen AI Antworten validiert werden, daher wurde eine konservative Bewertung erzeugt."
+      : "No sufficiently stable AI responses could be validated at the moment, so a conservative rating was generated.",
+    pros: locale === "de"
+      ? ["Keine akuten Hochrisiko-Indikatoren bestätigt"]
+      : ["No acute high risk indicators confirmed"],
+    cons: locale === "de"
+      ? ["Unvollständige Datenlage"]
+      : ["Incomplete data context"],
+    warnings: locale === "de"
+      ? ["Bitte vor Kauf externe Quellen und Händlerdaten prüfen"]
+      : ["Please verify external sources and seller data before purchase"],
+    alternatives: [],
+    recommendation: "ONLY IF",
+    recommendation_detail: locale === "de"
+      ? "Nur kaufen, wenn Preis, Händlerprofil und unabhängige Bewertungen plausibel sind."
+      : "Buy only if price, seller profile, and independent reviews look plausible.",
+    rating_breakdown: [
+      { name: "Build Quality", score: 5 },
+      { name: "Performance", score: 5 },
+      { name: "Value for Money", score: 5 },
+      { name: "User Satisfaction", score: 5 },
+      { name: "Reliability", score: 5 },
+      { name: "Features", score: 5 },
+    ],
+    technical_specs: [],
+    user_sentiment: "Mixed",
+    common_complaints: [],
+    best_for: [],
+    not_suitable_for: [],
+  };
+}
+
 function tryParseJSON(text: string): unknown | null {
   // Try direct parse first
   try {
@@ -185,7 +490,7 @@ async function callAIProvider({
   apiKey: string,
   apiUrl: string,
   models: string[],
-  messages: any[],
+  messages: OpenRouterMessage[],
   appUrl: string,
   title: string,
   imageMode?: boolean,
@@ -202,7 +507,7 @@ async function callAIProvider({
           headers["HTTP-Referer"] = appUrl;
           headers["X-Title"] = title;
         }
-        const body: any = {
+        const body: Record<string, unknown> = {
           model,
           messages: attempt > 0 ? [...messages, { role: "user", content: RETRY_PROMPT }] : messages,
           temperature: 0.3,
@@ -340,7 +645,8 @@ export async function analyzeProduct(
       lastError = err;
     }
   }
-  throw lastError ?? new Error("Analysis failed: No AI provider available");
+  console.warn("[AI] returning fallback product analysis", lastError);
+  return buildFallbackProductAnalysis(type, value, locale);
 }
 
 export async function* streamAnalysisSteps(
@@ -393,7 +699,7 @@ export async function analyzeFakeDetector(
     : FAKE_DETECTOR_TEXT_PROMPT.replace("{text}", value)) +
     (locale === "de" ? "\n\nRespond in German language." : "");
 
-  const messages = [
+  const messages: OpenRouterMessage[] = [
     { role: "system", content: FAKE_DETECTOR_SYSTEM_PROMPT },
     { role: "user", content: userPrompt },
   ];
@@ -418,7 +724,8 @@ export async function analyzeFakeDetector(
         imageMode: false,
       });
       const parsed = tryParseJSON(content);
-      const validated = fakeDetectorResultSchema.safeParse(parsed);
+      const normalized = sanitizeFakeDetectorResponse(parsed, value, locale);
+      const validated = fakeDetectorResultSchema.safeParse(normalized);
       if (validated.success) {
         console.info(`[FakeDetector] ${provider} validation passed`);
         return validated.data as FakeDetectorResult;
@@ -430,8 +737,8 @@ export async function analyzeFakeDetector(
       lastError = err;
     }
   }
-
-  throw lastError ?? new Error("Fake detection failed: No AI provider available");
+  console.warn("[FakeDetector] returning fallback result", lastError);
+  return buildFallbackFakeDetectorResult(value, locale);
 }
 
 // ============================================================================
@@ -450,7 +757,7 @@ export async function analyzeBudgetOptimizer(
   const openrouterModels = (process.env.OPENROUTER_MODELS ?? "openai/gpt-4o-mini").split(",").filter(Boolean);
 
   const userPrompt = buildBudgetOptimizerPrompt(budget, currency, items, locale);
-  const messages = [
+  const messages: OpenRouterMessage[] = [
     { role: "system", content: BUDGET_OPTIMIZER_SYSTEM_PROMPT },
     { role: "user", content: userPrompt },
   ];
@@ -475,11 +782,8 @@ export async function analyzeBudgetOptimizer(
         imageMode: false,
       });
       const parsed = tryParseJSON(content);
-      // Inject the user's budget into the parsed result as ground truth
-      if (parsed && typeof parsed === "object") {
-        (parsed as Record<string, unknown>).total_budget = budget;
-      }
-      const validated = budgetOptimizerResultSchema.safeParse(parsed);
+      const sanitized = sanitizeBudgetOptimizerResponse(parsed, budget, currency, items, locale);
+      const validated = budgetOptimizerResultSchema.safeParse(sanitized);
       if (validated.success) {
         console.info(`[BudgetOptimizer] ${provider} validation passed`);
         return validated.data as BudgetOptimizerResult;
@@ -491,6 +795,6 @@ export async function analyzeBudgetOptimizer(
       lastError = err;
     }
   }
-
-  throw lastError ?? new Error("Budget optimization failed: No AI provider available");
+  console.warn("[BudgetOptimizer] returning fallback result", lastError);
+  return buildFallbackBudgetOptimizerResult(budget, currency, items, locale);
 }
