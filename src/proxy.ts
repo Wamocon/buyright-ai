@@ -27,7 +27,17 @@ function extractLocale(pathname: string): string | null {
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
+  try {
+    return await proxyInner(request);
+  } catch {
+    // Absolute safety net: never let the proxy crash with MIDDLEWARE_INVOCATION_FAILED.
+    // Pass the request through without locale handling or auth checks.
+    return NextResponse.next();
+  }
+}
+
+async function proxyInner(request: NextRequest) {
+  const { pathname } = request.nextUrl;
   const stripped = stripLocale(pathname);
   const locale = extractLocale(pathname); // null = default (en)
 
@@ -42,19 +52,25 @@ export async function proxy(request: NextRequest) {
   let user = null;
 
   if (supabaseUrl && supabaseKey) {
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          for (const { name, value, options } of cookiesToSet) {
-            intlResponse.cookies.set(name, value, options);
-          }
+    try {
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            for (const { name, value, options } of cookiesToSet) {
+              intlResponse.cookies.set(name, value, options);
+            }
+          },
         },
-      },
-    });
+      });
 
-    const { data } = await supabase.auth.getUser();
-    user = data.user;
+      const { data } = await supabase.auth.getUser();
+      user = data.user;
+    } catch {
+      // Supabase is unreachable (wrong URL, network issue, etc.) - treat as anonymous.
+      // This prevents MIDDLEWARE_INVOCATION_FAILED on Vercel Edge.
+      user = null;
+    }
   }
 
   const isProtected = PROTECTED_PATHS.some((p) => stripped === p || stripped.startsWith(`${p}/`));
