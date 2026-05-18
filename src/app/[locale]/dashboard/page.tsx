@@ -36,11 +36,19 @@ export default async function DashboardPage({
 
   const t = await getTranslations("dashboard");
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  let supabase: Awaited<ReturnType<typeof createClient>>;
+  let user: import("@supabase/supabase-js").User | null = null;
+
+  try {
+    supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  } catch {
+    redirect(`/${locale === "de" ? "de/" : ""}login?redirect=/dashboard`);
+  }
 
   if (!user) {
-    redirect("/login?redirect=/dashboard");
+    redirect(`/${locale === "de" ? "de/" : ""}login?redirect=/dashboard`);
   }
 
   const { data: profile } = await supabase
