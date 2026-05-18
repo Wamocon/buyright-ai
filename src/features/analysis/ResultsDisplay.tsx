@@ -21,28 +21,11 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   getScoreColor,
+  getScoreLabel,
   getRecommendationColor,
 } from "@/utils/helpers";
 import type { AnalysisResult } from "@/types";
 import { toast } from "sonner";
-
-function useTranslatedRecommendation(t: ReturnType<typeof useTranslations>, rec: string): string {
-  switch (rec) {
-    case "BUY": return t("recBuy");
-    case "DON'T BUY": return t("recDontBuy");
-    case "ONLY IF": return t("recOnlyIf");
-    default: return rec;
-  }
-}
-
-function useTranslatedScoreLabel(t: ReturnType<typeof useTranslations>, score: number): string {
-  if (score <= 20) return t("scoreVeryPoor");
-  if (score <= 39) return t("scorePoor");
-  if (score <= 55) return t("scoreBelowAvg");
-  if (score <= 69) return t("scoreAverage");
-  if (score <= 85) return t("scoreGood");
-  return t("scoreExcellent");
-}
 
 interface ResultsDisplayProps {
   result: AnalysisResult;
@@ -50,25 +33,21 @@ interface ResultsDisplayProps {
   onNewAnalysis: () => void;
 }
 
-export function ResultsDisplay({ result, checkId, onNewAnalysis }: ResultsDisplayProps) {
+export function ResultsDisplay({ result, checkId: _checkId, onNewAnalysis }: ResultsDisplayProps) {
   const t = useTranslations("results");
-
-  const shareUrl = checkId
-    ? `${window.location.origin}/results/${checkId}`
-    : window.location.href;
 
   function handleShare() {
     const text = `BuyRight AI: ${result.product_name} scored ${result.score}/100 - ${result.recommendation}`;
     if (navigator.share) {
-      navigator.share({ title: "BuyRight AI Analysis", text, url: shareUrl }).catch(() => {});
+      navigator.share({ title: "BuyRight AI Analysis", text }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(shareUrl);
+      navigator.clipboard.writeText(text);
       toast.success(t("copiedToClipboard"));
     }
   }
 
   function handleCopyLink() {
-    navigator.clipboard.writeText(shareUrl);
+    navigator.clipboard.writeText(window.location.href);
     toast.success(t("linkCopied"));
   }
 
@@ -142,10 +121,10 @@ export function ResultsDisplay({ result, checkId, onNewAnalysis }: ResultsDispla
               <Badge
                 className={`text-sm font-bold px-4 py-1 ${getRecommendationColor(result.recommendation)}`}
               >
-                {useTranslatedRecommendation(t, result.recommendation)}
+                {result.recommendation}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                {useTranslatedScoreLabel(t, result.score)}
+                {getScoreLabel(result.score)}
               </span>
             </div>
           </div>

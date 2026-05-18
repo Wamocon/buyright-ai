@@ -1,9 +1,6 @@
 -- BuyRight AI - Initial Database Schema
 -- Migration: 20260515120000_initial_schema.sql
 
--- Enable necessary extensions
-create extension if not exists "uuid-ossp";
-
 -- ============================================================================
 -- profiles - extends Supabase auth.users
 -- ============================================================================
@@ -29,7 +26,7 @@ create index idx_profiles_email on public.profiles(email);
 -- product_checks - stores each analysis request
 -- ============================================================================
 create table public.product_checks (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references public.profiles(id) on delete set null,
   anonymous_ip text,
   input_type text not null check (input_type in ('url', 'image', 'text')),
@@ -49,7 +46,7 @@ create index idx_product_checks_score on public.product_checks(score);
 -- rate_limits - IP-based rate limiting for anonymous users
 -- ============================================================================
 create table public.rate_limits (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   ip_address text not null,
   date date not null default current_date,
   count integer not null default 0,
@@ -62,7 +59,7 @@ create unique index idx_rate_limits_ip_date on public.rate_limits(ip_address, da
 -- usage_tracking - aggregate usage analytics
 -- ============================================================================
 create table public.usage_tracking (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references public.profiles(id) on delete set null,
   action text not null,
   metadata jsonb default '{}',
@@ -76,7 +73,7 @@ create index idx_usage_tracking_action on public.usage_tracking(action);
 -- affiliate_clicks - track outbound affiliate link clicks
 -- ============================================================================
 create table public.affiliate_clicks (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   check_id uuid references public.product_checks(id) on delete set null,
   user_id uuid references public.profiles(id) on delete set null,
   shop text not null,
