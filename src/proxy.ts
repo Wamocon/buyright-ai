@@ -34,11 +34,15 @@ export async function proxy(request: NextRequest) {
   // Run intl middleware first to get locale-aware response with cookies
   const intlResponse = intlMiddleware(request);
 
-  // Attach Supabase session refresh to the intl response
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  // Attach Supabase session refresh to the intl response.
+  // Guard against missing env vars (e.g. during CI build or cold-start with empty secrets).
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+  let user = null;
+
+  if (supabaseUrl && supabaseKey) {
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll: (cookiesToSet) => {
@@ -47,12 +51,11 @@ export async function proxy(request: NextRequest) {
           }
         },
       },
-    },
-  );
+    });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    const { data } = await supabase.auth.getUser();
+    user = data.user;
+  }
 
   const isProtected = PROTECTED_PATHS.some((p) => stripped === p || stripped.startsWith(`${p}/`));
   const isAuthPage = AUTH_PATHS.some((p) => stripped === p || stripped.startsWith(`${p}/`));
