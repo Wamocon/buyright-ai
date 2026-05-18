@@ -1,18 +1,23 @@
 # =============================================================================
-# Self-contained Vercel Deployment Workflow
+# Caller Workflow - Manual Vercel Deployment
 # =============================================================================
-# Trigger : MANUAL ONLY via Actions tab → "Deploy to Vercel" → Run workflow
+# Source: Wamocon/github_workflow/examples/caller-production-deploy.yml
 #
-# Required secrets (repo or org level):
-#   VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
-#   NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_APP_NAME
-#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY
-#   SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_SCHEMA
-#   OPENROUTER_API_KEY, OPENROUTER_MODEL
-#   GROQ_API_KEY, RATE_LIMIT_FREE_DAILY, RATE_LIMIT_PRO_DAILY
+# Trigger : MANUAL ONLY - Actions tab → "Deploy to Vercel" → Run workflow
+#           Choose "production" (live URL) or "preview" (test URL) at run time.
+#           This workflow NEVER runs automatically.
 #
-# Why self-contained: Vercel sensitive env vars always return "" via vercel pull.
-# We inject real values directly from GitHub Secrets before the build step.
+# Secrets required:
+#   - VERCEL_PROJECT_ID → add this to your repo's GitHub secrets
+#                         (Vercel Project → Settings → General → Project ID)
+#
+# Already set at organisation level (no action needed):
+#   - VERCEL_TOKEN   → personal Vercel access token
+#   - VERCEL_ORG_ID  → Vercel personal account ID
+#
+# How it works:
+#   Builds locally via Vercel CLI - Vercel never sees the GitHub repo owner,
+#   so there are no "team seat" errors on a personal Hobby account in a GitHub org.
 # =============================================================================
 
 name: Deploy to Vercel
@@ -28,70 +33,17 @@ on:
         options:
           - production
           - preview
-
-env:
-  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      db_schema:
+        description: "Optional NEXT_PUBLIC_DB_SCHEMA override (leave empty to use Vercel env vars)"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   deploy:
     name: Deploy - ${{ inputs.environment }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-
-      - name: Pull Vercel project settings
-        run: vercel pull --yes --environment=${{ inputs.environment }} --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Remove Vercel env file (sensitive vars are always empty strings)
-        run: rm -f .vercel/.env.production.local .vercel/.env.preview.local
-
-      - name: Build project
-        env:
-          NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
-          NEXT_PUBLIC_APP_NAME: ${{ secrets.NEXT_PUBLIC_APP_NAME }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_DB_SCHEMA: ${{ secrets.SUPABASE_DB_SCHEMA }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          RATE_LIMIT_FREE_DAILY: ${{ secrets.RATE_LIMIT_FREE_DAILY }}
-          RATE_LIMIT_PRO_DAILY: ${{ secrets.RATE_LIMIT_PRO_DAILY }}
-        run: |
-          if [[ "${{ inputs.environment }}" == "production" ]]; then
-            vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-          else
-            vercel build --token=${{ secrets.VERCEL_TOKEN }}
-          fi
-
-      - name: Deploy to Vercel
-        id: deploy
-        run: |
-          PROD_FLAG=""
-          [[ "${{ inputs.environment }}" == "production" ]] && PROD_FLAG="--prod"
-          set -euo pipefail
-          DEPLOY_URL=$(vercel deploy --prebuilt $PROD_FLAG --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
-          echo "$DEPLOY_URL"
-          URL=$(echo "$DEPLOY_URL" | grep -Eo 'https://[^ ]+\.vercel\.app' | tail -1 || true)
-          if [[ -n "$URL" ]]; then
-            echo "deploy_url=$URL" >> "$GITHUB_OUTPUT"
-            echo "### Deployed to Vercel" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Environment:** ${{ inputs.environment }}" >> "$GITHUB_STEP_SUMMARY"
-            echo "**URL:** $URL" >> "$GITHUB_STEP_SUMMARY"
-          fi
+    uses: Wamocon/github_workflow/.github/workflows/deploy.yml@main
+    with:
+      vercel_env: ${{ inputs.environment }}
+      db_schema: ${{ inputs.db_schema }}
+    secrets: inherit
