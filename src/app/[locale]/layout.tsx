@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   description:
     "AI-powered product analysis. Get instant scores, pros & cons, and clear buy recommendations before you purchase.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
   openGraph: {
     type: "website",
     siteName: "BuyRight AI",
