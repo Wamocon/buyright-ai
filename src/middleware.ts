@@ -17,16 +17,14 @@ function detectLocale(req: NextRequest): Locale {
   return defaultLocale;
 }
 
-export function proxy(request: NextRequest): NextResponse {
+export function middleware(request: NextRequest): NextResponse {
   const { pathname } = request.nextUrl;
 
-  // Check if path already starts with a supported locale
   const hasLocale = locales.some(
     (l) => pathname.startsWith(`/${l}/`) || pathname === `/${l}`
   );
 
   if (hasLocale) {
-    // Pass through - extract locale and set header for next-intl
     const locale = locales.find(
       (l) => pathname.startsWith(`/${l}/`) || pathname === `/${l}`
     ) as Locale;
@@ -35,7 +33,6 @@ export function proxy(request: NextRequest): NextResponse {
     return res;
   }
 
-  // No locale prefix - use detection and redirect if non-default
   const locale = detectLocale(request);
   if (locale !== defaultLocale) {
     const url = request.nextUrl.clone();
@@ -43,7 +40,6 @@ export function proxy(request: NextRequest): NextResponse {
     return NextResponse.redirect(url);
   }
 
-  // Default locale - pass through without prefix
   const res = NextResponse.next();
   res.headers.set("x-next-intl-locale", defaultLocale);
   return res;
